@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sidebar-w: 220px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-gray-400; }
+
+/* Smooth transitions on interactive elements */
+button, a, [role="button"] { transition: opacity 0.1s, background-color 0.1s, color 0.1s; }

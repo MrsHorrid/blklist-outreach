@@ -12,6 +12,8 @@ interface UserProfile {
   id: string
   name: string | null
   email: string
+  jobTitle: string | null
+  phone: string | null
   businessName: string | null
   businessDescription: string | null
   pitchAngle: string | null
@@ -31,6 +33,8 @@ export default function DashboardPage() {
 
   const [form, setForm] = useState({
     name: '',
+    jobTitle: '',
+    phone: '',
     businessName: '',
     businessDescription: '',
     pitchAngle: '',
@@ -46,6 +50,8 @@ export default function DashboardPage() {
         setProfile(user)
         setForm({
           name: user.name || '',
+          jobTitle: user.jobTitle || '',
+          phone: user.phone || '',
           businessName: user.businessName || '',
           businessDescription: user.businessDescription || '',
           pitchAngle: user.pitchAngle || '',
@@ -113,9 +119,9 @@ export default function DashboardPage() {
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* Identity */}
-        <Card title="Identity" subtitle="Your account details">
+        <Card title="Identity" subtitle="Used to personalise your outreach email signatures">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Your name" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} />
+            <Field label="Your name" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="Alex Johnson" />
             <div>
               <label className="text-xs text-gray-500 font-medium block mb-1.5">Email</label>
               <input
@@ -125,7 +131,31 @@ export default function DashboardPage() {
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-400 cursor-not-allowed"
               />
             </div>
+            <Field
+              label="Job title"
+              value={form.jobTitle}
+              onChange={v => setForm(f => ({ ...f, jobTitle: v }))}
+              placeholder="Head of Growth"
+            />
+            <Field
+              label="Phone (optional)"
+              value={form.phone}
+              onChange={v => setForm(f => ({ ...f, phone: v }))}
+              placeholder="+1 (555) 000-0000"
+            />
           </div>
+          {(form.name || form.jobTitle) && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <p className="text-xs text-gray-400 mb-1.5 font-medium">Email sign-off preview</p>
+              <p className="text-sm text-gray-700 whitespace-pre-line font-mono">
+                {[
+                  form.name || 'Your Name',
+                  [form.jobTitle, form.businessName].filter(Boolean).join(' @ ') || 'Your Title @ Your Company',
+                  form.phone,
+                ].filter(Boolean).join('\n')}
+              </p>
+            </div>
+          )}
         </Card>
 
         {/* Business */}

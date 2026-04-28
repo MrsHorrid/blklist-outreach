@@ -52,6 +52,12 @@ export interface GenerateEmailInput {
   signals?: string[]
   tone?: EmailTone
   whyFit?: string
+  // Sender profile (from signed-in user)
+  senderName?: string
+  senderTitle?: string
+  senderBusiness?: string
+  senderDescription?: string
+  senderPitch?: string
 }
 
 export interface GeneratedEmail {
@@ -68,9 +74,20 @@ export async function generateOutreachEmail(input: GenerateEmailInput): Promise<
     urgent: 'Time-sensitive angle. Mention a specific market window or opportunity.',
   }
 
-  const prompt = `You are a senior B2B outreach specialist for BLKLIST.
+  const senderName = input.senderName || 'Alex'
+  const senderBusiness = input.senderBusiness || 'BLKLIST'
+  const senderTitle = input.senderTitle || 'Growth'
+  const signOff = `${senderName}\n${senderTitle} @ ${senderBusiness}`
 
-${BLKLIST_POSITIONING}
+  const positioning = input.senderDescription
+    ? `About ${senderBusiness}:\n${input.senderDescription}${input.senderPitch ? `\n\nKey value proposition: ${input.senderPitch}` : ''}`
+    : BLKLIST_POSITIONING
+
+  const whyFitLabel = `Why ${senderBusiness} fits`
+
+  const prompt = `You are a senior B2B outreach specialist for ${senderBusiness}.
+
+${positioning}
 
 Write a cold outreach email with these specifics:
 - Company: ${input.company}
@@ -78,18 +95,20 @@ Write a cold outreach email with these specifics:
 - Contact: ${input.contactName}, ${input.contactRole}
 - Active marketing signals: ${input.signals?.join(', ') || 'Not specified'}
 - Brand context: ${input.brandNotes}
-${input.whyFit ? `- Why BLKLIST fits (use this): ${input.whyFit}` : ''}
+${input.whyFit ? `- ${whyFitLabel} (use this): ${input.whyFit}` : ''}
 
 Tone guide: ${toneGuide[input.tone || 'confident']}
 
 Requirements:
 1. Open with "Hi ${input.contactName.split(' ')[0]}," — never "Dear" or "Hello"
 2. Reference something SPECIFIC about ${input.company}'s current strategy
-3. Make the BLKLIST pitch feel like an obvious next step for THEM specifically
-4. Name-drop at least one relevant client (Adidas, Nike, or Disney+) in context
+3. Make the ${senderBusiness} pitch feel like an obvious next step for THEM specifically
+${input.senderDescription
+  ? `4. End with a soft CTA: a 20-min discovery call`
+  : `4. Name-drop at least one relevant client (Adidas, Nike, or Disney+) in context
 5. Mention Google backing ($350K) and Lumen verification as trust signals
-6. End with a soft CTA: 20-min call to show the numbers
-7. Sign as: Alex\nGrowth @ BLKLIST
+6. End with a soft CTA: 20-min call to show the numbers`}
+7. Sign as: ${signOff}
 8. Keep it under 180 words — every word must earn its place
 9. NO generic openers like "I hope this finds you well"
 10. NO buzzwords like "synergy", "leverage", "scale" without substance

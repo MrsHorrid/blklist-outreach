@@ -20,6 +20,10 @@ model User {
   passwordHash  String?
   name          String?
 
+  // Sender identity (used in outreach emails)
+  jobTitle  String?
+  phone     String?
+
   // Business profile (used to personalise discovery)
   businessName        String?
   businessDescription String?

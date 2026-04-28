@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { generateOutreachEmail, EmailTone } from '@/lib/ai'
 import { z } from 'zod'
@@ -15,7 +16,24 @@ export async function POST(req: NextRequest, { params }: Params) {
     const body = await req.json()
     const { tone } = Schema.parse(body)
 
-    const lead = await db.lead.findUnique({ where: { id } })
+    const session = await auth()
+
+    const [lead, user] = await Promise.all([
+      db.lead.findUnique({ where: { id } }),
+      session?.user?.id
+        ? db.user.findUnique({
+            where: { id: session.user.id },
+            select: {
+              name: true,
+              jobTitle: true,
+              businessName: true,
+              businessDescription: true,
+              pitchAngle: true,
+            },
+          })
+        : null,
+    ])
+
     if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
 
     const email = await generateOutreachEmail({
@@ -27,6 +45,11 @@ export async function POST(req: NextRequest, { params }: Params) {
       signals: lead.signals,
       tone: tone as EmailTone,
       whyFit: lead.whyFit ?? undefined,
+      senderName: user?.name ?? undefined,
+      senderTitle: user?.jobTitle ?? undefined,
+      senderBusiness: user?.businessName ?? undefined,
+      senderDescription: user?.businessDescription ?? undefined,
+      senderPitch: user?.pitchAngle ?? undefined,
     })
 
     return NextResponse.json(email)

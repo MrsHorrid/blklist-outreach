@@ -5,6 +5,8 @@ import { z } from 'zod'
 
 const ProfileSchema = z.object({
   name: z.string().min(1).max(80).optional(),
+  jobTitle: z.string().max(100).optional(),
+  phone: z.string().max(30).optional(),
   businessName: z.string().max(100).optional(),
   businessDescription: z.string().max(1000).optional(),
   pitchAngle: z.string().max(500).optional(),
@@ -20,7 +22,7 @@ export async function GET() {
   const user = await db.user.findUnique({
     where: { id: session.user.id },
     select: {
-      id: true, name: true, email: true,
+      id: true, name: true, email: true, jobTitle: true, phone: true,
       businessName: true, businessDescription: true, pitchAngle: true,
       targetIndustries: true, targetGeographies: true, targetSizes: true,
       gmailConnected: true, gmailEmail: true,
@@ -41,7 +43,7 @@ export async function PATCH(req: NextRequest) {
       where: { id: session.user.id },
       data,
       select: {
-        id: true, name: true, email: true,
+        id: true, name: true, email: true, jobTitle: true, phone: true,
         businessName: true, businessDescription: true, pitchAngle: true,
         targetIndustries: true, targetGeographies: true, targetSizes: true,
         gmailConnected: true, gmailEmail: true,

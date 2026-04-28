@@ -1,6 +1,39 @@
-node_modules
-.env*.local
-.env.local
-.next
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-.vercel
+# Build output
+.next/
+out/
+dist/
+build/
+
+# Environment variables — never commit these
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel
+.vercel/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.log
+*.tsbuildinfo
+
+# Claude Code local config
+.claude/
+
+# IDE
+.idea/
+.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

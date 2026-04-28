@@ -1,21 +1,19 @@
-import { auth } from '@/auth'
-import { NextResponse } from 'next/server'
+import NextAuth from 'next-auth'
+import { authConfig } from './auth.config'
+
+const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const { pathname } = req.nextUrl
-  const isAuth = !!req.auth
-
-  // Public routes
-  const isPublic = pathname.startsWith('/login') ||
+  const isPublic =
+    pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/track')
 
-  if (isPublic) return NextResponse.next()
-  if (!isAuth) {
-    return NextResponse.redirect(new URL('/login', req.url))
+  if (!isPublic && !req.auth) {
+    return Response.redirect(new URL('/login', req.url))
   }
-  return NextResponse.next()
 })
 
 export const config = {

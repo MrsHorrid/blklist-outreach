@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ScoreBadge } from '@/components/ui/ScoreBadge'
 
 const INDUSTRIES = ['eCommerce', 'Fashion & Apparel', 'DTC Brands', 'SaaS', 'Gaming', 'Beauty & Skincare', 'Health & Wellness', 'Fintech', 'Travel', 'Media & Entertainment']
@@ -8,6 +8,8 @@ const SIZES = ['Startup (1-50)', 'SMB (51-200)', 'Mid-market (201-1000)', 'Enter
 const GEOGRAPHIES = ['United States', 'United Kingdom', 'Europe', 'Global', 'APAC', 'North America']
 const AD_ACTIVITIES = ['Actively running paid ads', 'Strong social presence', 'High content output', 'Running influencer campaigns', 'Any digital marketing activity']
 const MIN_REVENUES = ['$1M+', '$5M+', '$10M+', '$50M+', '$100M+']
+
+type SortKey = 'score' | 'company' | 'date'
 
 interface DiscoveredLead {
   company: string
@@ -25,6 +27,7 @@ interface DiscoveredLead {
   whyFit: string
   estimatedRevenue: string
   companySize: string
+  _discoveredAt?: number
 }
 
 export default function DiscoverPage() {
@@ -42,8 +45,25 @@ export default function DiscoverPage() {
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
   const [addingId, setAddingId] = useState<string | null>(null)
+  const [sortKey, setSortKey] = useState<SortKey>('score')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
+
+  const sortedLeads = useMemo(() => {
+    return [...leads].sort((a, b) => {
+      let cmp = 0
+      if (sortKey === 'score') cmp = a.score - b.score
+      else if (sortKey === 'company') cmp = a.company.localeCompare(b.company)
+      else if (sortKey === 'date') cmp = (a._discoveredAt ?? 0) - (b._discoveredAt ?? 0)
+      return sortDir === 'desc' ? -cmp : cmp
+    })
+  }, [leads, sortKey, sortDir])
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir(key === 'company' ? 'asc' : 'desc') }
+  }
 
   const discover = async () => {
     setLoading(true)
@@ -57,7 +77,8 @@ export default function DiscoverPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Discovery failed')
-      setLeads(data.leads || [])
+      const ts = Date.now()
+      setLeads((data.leads || []).map((l: DiscoveredLead, i: number) => ({ ...l, _discoveredAt: ts + i })))
       setWebSearched(!!data.webSearched)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong')
@@ -186,10 +207,25 @@ export default function DiscoverPage() {
                 </span>
               )}
             </div>
-            <span className="text-xs text-gray-400">Click "Add to CRM" to save a lead</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 mr-1">Sort:</span>
+              {([['score', 'Relevance'], ['company', 'A–Z'], ['date', 'Date']] as [SortKey, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => toggleSort(key)}
+                  className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${
+                    sortKey === key
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'border-gray-200 text-gray-500 hover:border-indigo-300'
+                  }`}
+                >
+                  {label} {sortKey === key ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="space-y-3">
-            {leads.map((lead) => (
+            {sortedLeads.map((lead) => (
               <div key={lead.domain}
                 className="bg-white border border-gray-200 rounded-xl p-4 hover:border-indigo-200 transition-colors">
                 <div className="flex items-start justify-between gap-3">

@@ -2,13 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Badge } from '@/components/ui/Badge'
 import { ScoreBadge } from '@/components/ui/ScoreBadge'
 import { LeadDrawer } from '@/components/leads/LeadDrawer'
 import { formatDistanceToNow } from 'date-fns'
 
-const STATUSES = ['ALL', 'DISCOVERED', 'CONTACTED', 'OPENED', 'REPLIED', 'MEETING', 'CLOSED', 'DISQUALIFIED']
 const INDUSTRIES = ['ALL', 'eCommerce', 'Fashion', 'DTC', 'SaaS', 'Gaming', 'Beauty', 'Health', 'Finance', 'Travel', 'Media']
+
+interface Tag {
+  id: string
+  name: string
+  color: string
+}
 
 interface Lead {
   id: string
@@ -23,6 +27,7 @@ interface Lead {
   status: string
   score: number
   updatedAt: string
+  tags: Tag[]
   _count: { emails: number; notes: number }
 }
 
@@ -32,17 +37,22 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('ALL')
   const [industryFilter, setIndustryFilter] = useState('ALL')
+  const [tagFilter, setTagFilter] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [allTags, setAllTags] = useState<Tag[]>([])
+
+  useEffect(() => {
+    fetch('/api/tags').then(r => r.json()).then(d => setAllTags(d.tags || []))
+  }, [])
 
   const fetchLeads = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (search) params.set('search', search)
-      if (statusFilter !== 'ALL') params.set('status', statusFilter)
       if (industryFilter !== 'ALL') params.set('industry', industryFilter)
+      if (tagFilter) params.set('tagId', tagFilter)
 
       const res = await fetch(`/api/leads?${params}`)
       const data = await res.json()
@@ -53,7 +63,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, statusFilter, industryFilter])
+  }, [search, industryFilter, tagFilter])
 
   useEffect(() => {
     const t = setTimeout(fetchLeads, 200)
@@ -92,13 +102,14 @@ export default function LeadsPage() {
             className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-400"
           />
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="text-sm border border-gray-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400">
-          {STATUSES.map((s) => <option key={s} value={s}>{s === 'ALL' ? 'All statuses' : s.charAt(0) + s.slice(1).toLowerCase()}</option>)}
-        </select>
         <select value={industryFilter} onChange={(e) => setIndustryFilter(e.target.value)}
           className="text-sm border border-gray-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400">
           {INDUSTRIES.map((i) => <option key={i} value={i}>{i === 'ALL' ? 'All industries' : i}</option>)}
+        </select>
+        <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}
+          className="text-sm border border-gray-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400">
+          <option value="">All tags</option>
+          {allTags.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
 
@@ -125,7 +136,7 @@ export default function LeadsPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Industry</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Contact</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Score</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Status</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Tags</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Activity</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Updated</th>
               </tr>
@@ -161,7 +172,18 @@ export default function LeadsPage() {
                     <ScoreBadge score={lead.score} />
                   </td>
                   <td className="px-4 py-3">
-                    <Badge status={lead.status} />
+                    <div className="flex flex-wrap gap-1">
+                      {lead.tags?.map(tag => (
+                        <span
+                          key={tag.id}
+                          className="px-2 py-0.5 text-white text-xs rounded-full font-medium"
+                          style={{ backgroundColor: tag.color }}
+                        >
+                          {tag.name}
+                        </span>
+                      ))}
+                      {(!lead.tags || lead.tags.length === 0) && <span className="text-gray-300">—</span>}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 text-xs text-gray-400">

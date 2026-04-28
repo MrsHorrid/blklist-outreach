@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status')
     const industry = searchParams.get('industry')
     const search = searchParams.get('search')
+    const tagId = searchParams.get('tagId')
     const sortBy = searchParams.get('sortBy') || 'updatedAt'
     const sortDir = (searchParams.get('sortDir') || 'desc') as 'asc' | 'desc'
     const limit = parseInt(searchParams.get('limit') || '100')
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
     const where: Record<string, unknown> = {}
     if (status && status !== 'ALL') where.status = status
     if (industry && industry !== 'ALL') where.industry = { contains: industry, mode: 'insensitive' }
+    if (tagId) where.tags = { some: { tagId } }
     if (search) {
       where.OR = [
         { company: { contains: search, mode: 'insensitive' } },
@@ -51,12 +53,21 @@ export async function GET(req: NextRequest) {
         where,
         orderBy: { [sortBy]: sortDir },
         take: limit,
-        include: { _count: { select: { emails: true, notes: true } } },
+        include: {
+          _count: { select: { emails: true, notes: true } },
+          tags: { include: { tag: true } },
+        },
       }),
       db.lead.count({ where }),
     ])
 
-    return NextResponse.json({ leads, total })
+    // Flatten tags for easier client consumption
+    const leadsWithTags = leads.map(l => ({
+      ...l,
+      tags: l.tags.map(lt => lt.tag),
+    }))
+
+    return NextResponse.json({ leads: leadsWithTags, total })
   } catch (error) {
     console.error('[GET /api/leads]', error)
     return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 })

@@ -14,10 +14,12 @@ export async function GET(_req: NextRequest, { params }: Params) {
         emails: { orderBy: { createdAt: 'desc' } },
         notes: { orderBy: { createdAt: 'desc' } },
         activities: { orderBy: { createdAt: 'desc' }, take: 20 },
+        tags: { include: { tag: true } },
       },
     })
     if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
-    return NextResponse.json({ lead })
+    // Flatten tags
+    return NextResponse.json({ lead: { ...lead, tags: lead.tags.map(lt => lt.tag) } })
   } catch (error) {
     console.error('[GET /api/leads/:id]', error)
     return NextResponse.json({ error: 'Failed to fetch lead' }, { status: 500 })

@@ -8,6 +8,11 @@ import { formatDistanceToNow } from 'date-fns'
 const STATUSES = ['DISCOVERED', 'CONTACTED', 'OPENED', 'REPLIED', 'MEETING', 'CLOSED', 'DISQUALIFIED']
 const TONES = ['confident', 'premium', 'casual', 'urgent'] as const
 
+const TAG_COLORS = [
+  '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
+  '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#64748b',
+]
+
 interface Lead {
   id: string
   company: string
@@ -34,6 +39,13 @@ interface Lead {
   emails: Email[]
   notes: Note[]
   activities: Activity[]
+  tags: Tag[]
+}
+
+interface Tag {
+  id: string
+  name: string
+  color: string
 }
 
 interface Email {
@@ -75,6 +87,14 @@ export function LeadDrawer({ leadId, onClose, onUpdate }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
   const [loading, setLoading] = useState(false)
 
+  // Tags state
+  const [allTags, setAllTags] = useState<Tag[]>([])
+  const [leadTagIds, setLeadTagIds] = useState<Set<string>>(new Set())
+  const [showTagPicker, setShowTagPicker] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0])
+  const [creatingTag, setCreatingTag] = useState(false)
+
   // Enrich state
   const [enriching, setEnriching] = useState(false)
   const [enriched, setEnriched] = useState(false)
@@ -99,18 +119,28 @@ export function LeadDrawer({ leadId, onClose, onUpdate }: Props) {
       const res = await fetch(`/api/leads/${leadId}`)
       const data = await res.json()
       setLead(data.lead)
+      // Sync tag IDs from lead
+      setLeadTagIds(new Set((data.lead?.tags || []).map((t: Tag) => t.id)))
     } finally {
       setLoading(false)
     }
   }, [leadId])
+
+  const fetchAllTags = useCallback(async () => {
+    const res = await fetch('/api/tags')
+    const data = await res.json()
+    setAllTags(data.tags || [])
+  }, [])
 
   useEffect(() => {
     setTab('overview')
     setGeneratedEmail(null)
     setShowEmailCompose(false)
     setEnriched(false)
+    setShowTagPicker(false)
     fetchLead()
-  }, [leadId, fetchLead])
+    fetchAllTags()
+  }, [leadId, fetchLead, fetchAllTags])
 
   const updateStatus = async (status: string) => {
     if (!lead) return
@@ -209,6 +239,46 @@ export function LeadDrawer({ leadId, onClose, onUpdate }: Props) {
     await fetch(`/api/leads/${lead.id}`, { method: 'DELETE' })
     onClose()
     onUpdate()
+  }
+
+  const toggleTag = async (tagId: string) => {
+    if (!lead) return
+    const next = new Set(leadTagIds)
+    if (next.has(tagId)) next.delete(tagId)
+    else next.add(tagId)
+    setLeadTagIds(next)
+    await fetch(`/api/leads/${lead.id}/tags`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tagIds: Array.from(next) }),
+    })
+  }
+
+  const createTag = async () => {
+    if (!newTagName.trim()) return
+    setCreatingTag(true)
+    const res = await fetch('/api/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newTagName.trim(), color: newTagColor }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setAllTags(prev => [...prev, data.tag].sort((a, b) => a.name.localeCompare(b.name)))
+      setNewTagName('')
+      // Auto-add the new tag to this lead
+      if (lead) {
+        const next = new Set(leadTagIds)
+        next.add(data.tag.id)
+        setLeadTagIds(next)
+        await fetch(`/api/leads/${lead.id}/tags`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tagIds: Array.from(next) }),
+        })
+      }
+    }
+    setCreatingTag(false)
   }
 
   if (!leadId) return null
@@ -327,6 +397,89 @@ export function LeadDrawer({ leadId, onClose, onUpdate }: Props) {
               {/* Overview */}
               {tab === 'overview' && (
                 <div className="p-5 space-y-5">
+                  {/* Tags */}
+                  <Section title="Tags">
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {allTags.filter(t => leadTagIds.has(t.id)).map(tag => (
+                        <span
+                          key={tag.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-white"
+                          style={{ backgroundColor: tag.color }}
+                        >
+                          {tag.name}
+                          <button
+                            onClick={() => toggleTag(tag.id)}
+                            className="opacity-70 hover:opacity-100 ml-0.5 leading-none"
+                          >×</button>
+                        </span>
+                      ))}
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowTagPicker(p => !p)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border border-dashed border-gray-300 text-gray-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                        >
+                          + Tag
+                        </button>
+                        {showTagPicker && (
+                          <div className="absolute left-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-xl w-56 p-3">
+                            <div className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Tags</div>
+                            <div className="space-y-0.5 max-h-36 overflow-y-auto mb-3">
+                              {allTags.length === 0 && (
+                                <div className="text-xs text-gray-400 py-1">No tags yet. Create one below.</div>
+                              )}
+                              {allTags.map(tag => (
+                                <label key={tag.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={leadTagIds.has(tag.id)}
+                                    onChange={() => toggleTag(tag.id)}
+                                    className="accent-indigo-600"
+                                  />
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: tag.color }}
+                                  />
+                                  <span className="text-sm text-gray-700 truncate">{tag.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                            <div className="border-t border-gray-100 pt-2">
+                              <div className="text-xs text-gray-400 mb-1.5">New tag</div>
+                              <div className="flex gap-1.5 mb-2">
+                                {TAG_COLORS.map(c => (
+                                  <button
+                                    key={c}
+                                    type="button"
+                                    onClick={() => setNewTagColor(c)}
+                                    className={`w-4 h-4 rounded-full transition-transform ${newTagColor === c ? 'scale-125 ring-2 ring-offset-1 ring-gray-300' : ''}`}
+                                    style={{ backgroundColor: c }}
+                                  />
+                                ))}
+                              </div>
+                              <div className="flex gap-1.5">
+                                <input
+                                  type="text"
+                                  value={newTagName}
+                                  onChange={e => setNewTagName(e.target.value)}
+                                  onKeyDown={e => e.key === 'Enter' && createTag()}
+                                  placeholder="Tag name…"
+                                  className="flex-1 text-xs border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                />
+                                <button
+                                  onClick={createTag}
+                                  disabled={!newTagName.trim() || creatingTag}
+                                  className="px-2.5 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+                                >
+                                  {creatingTag ? '…' : 'Add'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Section>
+
                   <Section title="Company">
                     <Row label="Industry" value={lead.industry} />
                     <Row label="Size" value={lead.companySize} />

@@ -9,7 +9,7 @@
 * { box-sizing: border-box; }
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply bg-[#f4f5f8] text-gray-900 antialiased;
   font-feature-settings: "cv11", "ss01";
 }
 
@@ -19,5 +19,15 @@ body {
 ::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded-full; }
 ::-webkit-scrollbar-thumb:hover { @apply bg-gray-400; }
 
+/* Sidebar scrollbar invisible */
+aside ::-webkit-scrollbar { width: 0; }
+
 /* Smooth transitions on interactive elements */
-button, a, [role="button"] { transition: opacity 0.1s, background-color 0.1s, color 0.1s; }
+button, a, [role="button"] {
+  transition: opacity 0.12s, background-color 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+}
+
+/* Input focus rings */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+}

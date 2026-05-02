@@ -1,25 +1,29 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
-import { Sidebar } from '@/components/layout/Sidebar'
+import { AppShell } from '@/components/layout/AppShell'
 import { SessionProvider } from 'next-auth/react'
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 
 export const metadata: Metadata = {
-  title: 'BLKLIST Outreach Engine',
-  description: 'Smart B2B lead generation and outreach platform',
+  title: 'BLKLIST Outreach',
+  description: 'AI-powered B2B outreach CRM',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={geist.variable}>
-      <body className="flex h-screen overflow-hidden">
+      <body className="bg-[#f4f5f8]">
         <SessionProvider>
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto bg-gray-50">
+          <AppShell>
             {children}
-          </main>
+          </AppShell>
         </SessionProvider>
       </body>
     </html>

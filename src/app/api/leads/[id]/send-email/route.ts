@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { sendEmail } from '@/lib/email'
 import { z } from 'zod'
@@ -13,6 +14,7 @@ const Schema = z.object({
 
 export async function POST(req: NextRequest, { params }: Params) {
   try {
+    const session = await auth()
     const { id } = await params
     const body = await req.json()
     const { subject, body: emailBody, tone } = Schema.parse(body)
@@ -20,6 +22,25 @@ export async function POST(req: NextRequest, { params }: Params) {
     const lead = await db.lead.findUnique({ where: { id } })
     if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     if (!lead.contactEmail) return NextResponse.json({ error: 'No contact email on this lead' }, { status: 400 })
+
+    // Load sender identity from user profile
+    let senderName: string | undefined
+    let gmailEmail: string | undefined
+    let gmailRefreshToken: string | undefined
+
+    if (session?.user?.id) {
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, gmailEmail: true, gmailRefreshToken: true, gmailConnected: true },
+      })
+      if (user) {
+        senderName = user.name ?? undefined
+        if (user.gmailConnected && user.gmailEmail && user.gmailRefreshToken) {
+          gmailEmail = user.gmailEmail
+          gmailRefreshToken = user.gmailRefreshToken
+        }
+      }
+    }
 
     const email = await db.email.create({
       data: {
@@ -37,6 +58,9 @@ export async function POST(req: NextRequest, { params }: Params) {
       subject,
       body: emailBody,
       trackingId: email.trackingId!,
+      fromName: senderName,
+      gmailEmail,
+      gmailRefreshToken,
     })
 
     await db.lead.update({

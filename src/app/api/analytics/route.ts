@@ -1,16 +1,25 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { getTeamUserIds } from '@/lib/team'
 
 export async function GET() {
   try {
+    const session = await auth()
+    const userIds = session?.user?.id ? await getTeamUserIds(session.user.id) : []
+    const userFilter = userIds.length > 0 ? { userId: { in: userIds } } : {}
+
     const [leads, emails, activities] = await Promise.all([
       db.lead.findMany({
+        where: userFilter,
         select: { id: true, status: true, industry: true, score: true },
       }),
       db.email.findMany({
+        where: { lead: userFilter },
         select: { status: true, opens: true, sentAt: true, openedAt: true, repliedAt: true },
       }),
       db.activity.findMany({
+        where: { lead: userFilter },
         orderBy: { createdAt: 'desc' },
         take: 20,
         include: { lead: { select: { company: true, emoji: true } } },

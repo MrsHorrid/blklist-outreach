@@ -33,13 +33,15 @@ model User {
   targetSizes         String[]
 
   // Gmail OAuth connection
-  gmailConnected Boolean @default(false)
-  gmailEmail     String?
+  gmailConnected    Boolean @default(false)
+  gmailEmail        String?
+  gmailRefreshToken String? @db.Text
 
-  accounts Account[]
-  sessions Session[]
-  leads    Lead[]
-  tags     Tag[]
+  accounts   Account[]
+  sessions   Session[]
+  leads      Lead[]
+  tags       Tag[]
+  teamMember TeamMember?
 }
 
 model Account {
@@ -75,6 +77,40 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ─── Teams ─────────────────────────────────────────────────────────────────────
+
+model Team {
+  id        String       @id @default(cuid())
+  createdAt DateTime     @default(now())
+  name      String
+  members   TeamMember[]
+  invites   TeamInvite[]
+}
+
+model TeamMember {
+  id        String     @id @default(cuid())
+  createdAt DateTime   @default(now())
+  teamId    String
+  userId    String     @unique
+  role      TeamRole   @default(MEMBER)
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TeamInvite {
+  id         String    @id @default(cuid())
+  createdAt  DateTime  @default(now())
+  teamId     String
+  email      String
+  token      String    @unique @default(cuid())
+  role       TeamRole  @default(MEMBER)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, email])
 }
 
 // ─── Tags ──────────────────────────────────────────────────────────────────────
@@ -232,4 +268,10 @@ enum ActivityType {
   ENRICHED
   TAG_ADDED
   TAG_REMOVED
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
 }

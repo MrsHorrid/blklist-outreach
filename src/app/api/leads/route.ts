@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/auth'
 import { db } from '@/lib/db'
+import { getTeamUserIds } from '@/lib/team'
 import { z } from 'zod'
 
 const LeadSchema = z.object({
@@ -26,6 +28,9 @@ const LeadSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth()
+    const userIds = session?.user?.id ? await getTeamUserIds(session.user.id) : []
+
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const industry = searchParams.get('industry')
@@ -35,7 +40,7 @@ export async function GET(req: NextRequest) {
     const sortDir = (searchParams.get('sortDir') || 'desc') as 'asc' | 'desc'
     const limit = parseInt(searchParams.get('limit') || '100')
 
-    const where: Record<string, unknown> = {}
+    const where: Record<string, unknown> = userIds.length > 0 ? { userId: { in: userIds } } : {}
     if (status && status !== 'ALL') where.status = status
     if (industry && industry !== 'ALL') where.industry = { contains: industry, mode: 'insensitive' }
     if (tagId) where.tags = { some: { tagId } }
@@ -76,10 +81,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
     const body = await req.json()
     const data = LeadSchema.parse(body)
 
-    const existing = await db.lead.findUnique({ where: { domain: data.domain } })
+    const existing = await db.lead.findFirst({ where: { domain: data.domain } })
     if (existing) {
       return NextResponse.json(
         { error: 'A lead with this domain already exists', existingId: existing.id },
@@ -90,6 +96,7 @@ export async function POST(req: NextRequest) {
     const lead = await db.lead.create({
       data: {
         ...data,
+        userId: session?.user?.id ?? null,
         contactEmail: data.contactEmail || null,
         activities: {
           create: { type: 'LEAD_CREATED', detail: `Added via ${data.source}` },

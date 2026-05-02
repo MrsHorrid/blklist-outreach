@@ -8,8 +8,10 @@ export default auth((req) => {
   const isPublic =
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
+    pathname.startsWith('/invite') ||
     pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/api/track')
+    pathname.startsWith('/api/track') ||
+    pathname.startsWith('/api/invite')
 
   if (!isPublic && !req.auth) {
     return Response.redirect(new URL('/login', req.url))

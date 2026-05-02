@@ -37,11 +37,56 @@ model User {
   gmailEmail        String?
   gmailRefreshToken String? @db.Text
 
-  accounts   Account[]
-  sessions   Session[]
-  leads      Lead[]
-  tags       Tag[]
-  teamMember TeamMember?
+  // Onboarding & preferences
+  onboardingCompleted Boolean @default(false)
+  primaryUseCase      String? // "agency", "freelance", "in-house", "founder", "other"
+  themePreference     String  @default("system") // "light", "dark", "system"
+
+  accounts        Account[]
+  sessions        Session[]
+  leads           Lead[]
+  tags            Tag[]
+  teamMember      TeamMember?
+  emailTemplates  EmailTemplate[]
+  sequences       Sequence[]
+  enrollments     SequenceEnrollment[]
+}
+
+// ─── Email Templates ──────────────────────────────────────────────────────────
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name      String
+  isDefault Boolean @default(false)
+
+  // Header
+  headerImageUrl String? @db.Text
+  headerHtml     String? @db.Text // optional custom html banner
+
+  // Body wrapper styling
+  accentColor String @default("#5046E5")
+  fontFamily  String @default("system")
+
+  // Signature
+  signatureName     String?
+  signatureTitle    String?
+  signatureCompany  String?
+  signatureImageUrl String? @db.Text // avatar / logo
+  signaturePhone    String?
+  signatureWebsite  String?
+  signatureLinkedIn String?
+
+  // Footer
+  footerText     String?
+  footerImageUrl String? @db.Text
+
+  @@index([userId])
 }
 
 model Account {
@@ -171,10 +216,11 @@ model Lead {
   source String?
   whyFit String?
 
-  emails     Email[]
-  notes      Note[]
-  activities Activity[]
-  tags       LeadTag[]
+  emails      Email[]
+  notes       Note[]
+  activities  Activity[]
+  tags        LeadTag[]
+  enrollments SequenceEnrollment[]
 
   @@index([status])
   @@index([score])
@@ -237,6 +283,58 @@ model Settings {
   aiModel   String   @default("claude-sonnet-4-20250514")
 }
 
+// ─── Sequences ─────────────────────────────────────────────────────────────────
+
+model Sequence {
+  id          String               @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean              @default(true)
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps       SequenceStep[]
+  enrollments SequenceEnrollment[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([userId])
+}
+
+model SequenceStep {
+  id         String   @id @default(cuid())
+  sequenceId String
+  sequence   Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  order      Int
+  subject    String
+  body       String   @db.Text
+  delayDays  Int      @default(3)
+  tone       String   @default("confident")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([sequenceId, order])
+  @@index([sequenceId])
+}
+
+model SequenceEnrollment {
+  id          String           @id @default(cuid())
+  sequenceId  String
+  sequence    Sequence         @relation(fields: [sequenceId], references: [id])
+  leadId      String
+  lead        Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User             @relation(fields: [userId], references: [id])
+  status      EnrollmentStatus @default(ACTIVE)
+  currentStep Int              @default(0)
+  nextSendAt  DateTime?
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+
+  @@unique([sequenceId, leadId])
+  @@index([status, nextSendAt])
+  @@index([leadId])
+}
+
 // ─── Enums ─────────────────────────────────────────────────────────────────────
 
 enum LeadStatus {
@@ -274,4 +372,13 @@ enum TeamRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  REPLIED
+  BOUNCED
+  UNSUBSCRIBED
 }

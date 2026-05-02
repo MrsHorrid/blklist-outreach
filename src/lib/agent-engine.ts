@@ -2,6 +2,8 @@
 // Safe (read-only) tools execute concurrently via Promise.all
 // Stateful/write tools execute sequentially
 
+import { getAIProvider } from './ai-provider'
+
 export type ToolDef = {
   type: 'function'
   function: {
@@ -45,11 +47,10 @@ export async function runAgent(
   executor: (name: string, args: Record<string, string>) => Promise<string>,
   options: AgentOptions = {}
 ): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not set')
+  const { apiKey, baseUrl, model: defaultModel, extraHeaders } = getAIProvider()
 
   const {
-    model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-haiku',
+    model = defaultModel,
     maxIterations = 40,
     maxTokens = 4096,
   } = options
@@ -57,13 +58,12 @@ export async function runAgent(
   let messages: AgentMessage[] = [{ role: 'user', content: prompt }]
 
   for (let i = 0; i < maxIterations; i++) {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const res = await fetch(baseUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-        'X-Title': 'BLKLIST Outreach',
+        ...extraHeaders,
       },
       body: JSON.stringify({
         model,
@@ -74,7 +74,22 @@ export async function runAgent(
       }),
     })
 
-    if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`)
+    if (!res.ok) {
+      const errText = await res.text()
+      // Groq returns 400 with code "tool_use_failed" when the model generates a
+      // malformed tool call (XML-style instead of JSON). Retry once with a nudge.
+      let errJson: { error?: { code?: string } } = {}
+      try { errJson = JSON.parse(errText) } catch { /* ignore */ }
+      if (res.status === 400 && errJson.error?.code === 'tool_use_failed' && i < maxIterations - 1) {
+        console.warn(`[agent] tool_use_failed on iteration ${i}, retrying...`)
+        messages = [...messages, {
+          role: 'user',
+          content: 'Your last response contained a malformed tool call. Please retry using the correct JSON tool_calls format.',
+        }]
+        continue
+      }
+      throw new Error(`AI provider ${res.status}: ${errText}`)
+    }
     const data = await res.json()
     const choice = data.choices?.[0]
     if (!choice) throw new Error('Empty response from model')

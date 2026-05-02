@@ -26,6 +26,7 @@ export async function GET() {
       businessName: true, businessDescription: true, pitchAngle: true,
       targetIndustries: true, targetGeographies: true, targetSizes: true,
       gmailConnected: true, gmailEmail: true,
+      onboardingCompleted: true, primaryUseCase: true,
     },
   })
   return NextResponse.json({ user })

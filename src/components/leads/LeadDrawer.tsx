@@ -82,6 +82,15 @@ interface Props {
 
 type Tab = 'overview' | 'emails' | 'notes' | 'activity'
 
+interface Sequence { id: string; name: string; _count?: { steps: number } }
+interface Enrollment {
+  id: string
+  status: string
+  currentStep: number
+  nextSendAt?: string | null
+  sequence: { id: string; name: string }
+}
+
 export function LeadDrawer({ leadId, onClose, onUpdate }: Props) {
   const [lead, setLead] = useState<Lead | null>(null)
   const [tab, setTab] = useState<Tab>('overview')
@@ -98,6 +107,12 @@ export function LeadDrawer({ leadId, onClose, onUpdate }: Props) {
   // Enrich state
   const [enriching, setEnriching] = useState(false)
   const [enriched, setEnriched] = useState(false)
+
+  // Sequence enrollment state
+  const [sequences, setSequences] = useState<Sequence[]>([])
+  const [enrollment, setEnrollment] = useState<Enrollment | null>(null)
+  const [showEnrollPicker, setShowEnrollPicker] = useState(false)
+  const [enrolling, setEnrolling] = useState(false)
 
   // Email generation state
   const [generating, setGenerating] = useState(false)
@@ -132,15 +147,37 @@ export function LeadDrawer({ leadId, onClose, onUpdate }: Props) {
     setAllTags(data.tags || [])
   }, [])
 
+  const fetchEnrollment = useCallback(async () => {
+    if (!leadId) return
+    try {
+      const res = await fetch(`/api/leads/${leadId}/enrollment`)
+      if (res.ok) {
+        const data = await res.json()
+        setEnrollment(data.enrollment ?? null)
+      }
+    } catch { /* enrollment is optional */ }
+  }, [leadId])
+
+  const fetchSequences = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sequences')
+      const data = await res.json()
+      setSequences(data.sequences || [])
+    } catch { /* ignore */ }
+  }, [])
+
   useEffect(() => {
     setTab('overview')
     setGeneratedEmail(null)
     setShowEmailCompose(false)
     setEnriched(false)
     setShowTagPicker(false)
+    setEnrollment(null)
+    setShowEnrollPicker(false)
     fetchLead()
     fetchAllTags()
-  }, [leadId, fetchLead, fetchAllTags])
+    fetchEnrollment()
+  }, [leadId, fetchLead, fetchAllTags, fetchEnrollment])
 
   const updateStatus = async (status: string) => {
     if (!lead) return
@@ -239,6 +276,23 @@ export function LeadDrawer({ leadId, onClose, onUpdate }: Props) {
     await fetch(`/api/leads/${lead.id}`, { method: 'DELETE' })
     onClose()
     onUpdate()
+  }
+
+  const enrollInSequence = async (sequenceId: string) => {
+    if (!lead) return
+    setEnrolling(true)
+    try {
+      await fetch(`/api/sequences/${sequenceId}/enroll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadIds: [lead.id] }),
+      })
+      setShowEnrollPicker(false)
+      fetchEnrollment()
+      onUpdate()
+    } finally {
+      setEnrolling(false)
+    }
   }
 
   const toggleTag = async (tagId: string) => {
@@ -480,6 +534,52 @@ export function LeadDrawer({ leadId, onClose, onUpdate }: Props) {
                     </div>
                   </Section>
 
+                  {/* Sequences */}
+                  <Section title="Sequences">
+                    {enrollment ? (
+                      <div className="mt-1 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${enrollment.status === 'ACTIVE' ? 'bg-indigo-500' : enrollment.status === 'PAUSED' ? 'bg-amber-500' : 'bg-zinc-400'}`} />
+                          <span className="text-sm font-medium text-gray-700">{enrollment.sequence.name}</span>
+                          <span className="text-xs text-gray-400 capitalize">{enrollment.status.toLowerCase()}</span>
+                        </div>
+                        {enrollment.nextSendAt && enrollment.status === 'ACTIVE' && (
+                          <span className="text-xs text-gray-400">
+                            Next: {formatDistanceToNow(new Date(enrollment.nextSendAt), { addSuffix: true })}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-1 relative">
+                        <button
+                          onClick={() => { fetchSequences(); setShowEnrollPicker(p => !p) }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border border-dashed border-gray-300 text-gray-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                        >
+                          {enrolling ? (
+                            <span className="w-2.5 h-2.5 border border-current/40 border-t-current rounded-full animate-spin" />
+                          ) : '+'} Enroll in sequence
+                        </button>
+                        {showEnrollPicker && (
+                          <div className="absolute left-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-xl w-56 overflow-hidden">
+                            {sequences.length === 0 ? (
+                              <div className="px-4 py-3 text-xs text-gray-400">No sequences yet.</div>
+                            ) : (
+                              sequences.map(seq => (
+                                <button
+                                  key={seq.id}
+                                  onClick={() => enrollInSequence(seq.id)}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                                >
+                                  {seq.name}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Section>
+
                   <Section title="Company">
                     <Row label="Industry" value={lead.industry} />
                     <Row label="Size" value={lead.companySize} />
@@ -716,8 +816,8 @@ function EmailCard({ email }: { email: Email }) {
         <span className="text-gray-400 text-sm ml-2">{expanded ? '▲' : '▼'}</span>
       </button>
       {expanded && (
-        <div className="px-3 pb-3 border-t border-gray-50">
-          <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed mt-2">{email.body}</pre>
+        <div className="px-5 py-4 border-t border-gray-100">
+          <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{email.body}</pre>
         </div>
       )}
     </div>

@@ -1,12 +1,12 @@
 export function ScoreBadge({ score }: { score: number }) {
-  const color =
-    score >= 80 ? 'text-green-600 bg-green-50 ring-green-200' :
-    score >= 60 ? 'text-blue-600 bg-blue-50 ring-blue-200' :
-    score >= 40 ? 'text-amber-600 bg-amber-50 ring-amber-200' :
-                  'text-red-500 bg-red-50 ring-red-200'
+  const tone =
+    score >= 80 ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60' :
+    score >= 60 ? 'text-sky-700 bg-sky-50 border-sky-200/60' :
+    score >= 40 ? 'text-amber-700 bg-amber-50 border-amber-200/60' :
+                  'text-red-600 bg-red-50 border-red-200/60'
 
   return (
-    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ring-1 ${color}`}>
+    <span className={`inline-flex items-center justify-center min-w-[26px] h-[22px] px-1.5 rounded-md text-[11px] font-semibold border tabular-nums ${tone}`}>
       {score}
     </span>
   )

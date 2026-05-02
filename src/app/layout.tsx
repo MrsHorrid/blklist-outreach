@@ -3,6 +3,7 @@ import { Geist } from 'next/font/google'
 import './globals.css'
 import { AppShell } from '@/components/layout/AppShell'
 import { SessionProvider } from 'next-auth/react'
+import { ThemeProvider, ThemeScript } from '@/components/theme/ThemeProvider'
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 
@@ -18,13 +19,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={geist.variable}>
-      <body className="bg-[#f4f5f8]">
-        <SessionProvider>
-          <AppShell>
-            {children}
-          </AppShell>
-        </SessionProvider>
+    <html lang="en" className={geist.variable} suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
+      <body className="bg-canvas">
+        <ThemeProvider>
+          <SessionProvider>
+            <AppShell>
+              {children}
+            </AppShell>
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

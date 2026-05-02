@@ -4,101 +4,97 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { motion } from 'framer-motion'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 
-// ── SVG Icons ─────────────────────────────────────────────────────────────────
+// ── Icons (1.5 stroke, 18px, consistent family) ──────────────────────────────
 
-function IconDashboard() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+const stroke = { stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' }
+
+const I = {
+  Home: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...stroke}>
+      <path d="M3 11l9-8 9 8M5 9.5V20a1 1 0 001 1h4v-7h4v7h4a1 1 0 001-1V9.5" />
     </svg>
-  )
-}
-
-function IconLeads() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="7" r="4" />
-      <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" />
-      <path d="M19 8v6M16 11h6" />
+  ),
+  Leads: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...stroke}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M3 20c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5" />
+      <circle cx="17" cy="9" r="2.5" />
+      <path d="M15.5 14.5c2.5 0 5 1.5 5 4" />
     </svg>
-  )
-}
-
-function IconDiscover() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-      <path d="M18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+  ),
+  Discover: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...stroke}>
+      <path d="M12 2.5l2.4 5.4 5.6.6-4.2 3.9 1.1 5.6L12 15.4l-4.9 2.6 1.1-5.6L4 8.5l5.6-.6L12 2.5z" />
     </svg>
-  )
-}
-
-function IconPipeline() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="5" height="18" rx="1" />
-      <rect x="10" y="7" width="5" height="14" rx="1" />
-      <rect x="17" y="11" width="5" height="10" rx="1" />
+  ),
+  Pipeline: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...stroke}>
+      <rect x="3" y="4" width="5" height="16" rx="1.5" />
+      <rect x="10" y="4" width="5" height="11" rx="1.5" />
+      <rect x="17" y="4" width="4" height="7" rx="1.5" />
     </svg>
-  )
-}
-
-function IconAnalytics() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 3v18h18" />
-      <path d="M7 16l4-4 4 4 5-5" />
+  ),
+  Sequences: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...stroke}>
+      <path d="M4 6h16M4 10h10M4 14h13M4 18h7" />
+      <circle cx="20" cy="17" r="3" />
+      <path d="M20 15.5v1.5l1 1" />
     </svg>
-  )
-}
-
-function IconProfile() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+  ),
+  Analytics: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...stroke}>
+      <path d="M3 3v17a1 1 0 001 1h17" />
+      <path d="M7 14l3.5-3.5L13 13l5-5" />
     </svg>
-  )
-}
-
-function IconTeam() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="7" r="3.5" />
-      <circle cx="17" cy="7" r="3.5" />
-      <path d="M2 20c0-3.3 3.1-6 7-6 1.2 0 2.4.3 3.4.8" />
-      <path d="M13 20c0-3.3 2.7-6 6-6" />
+  ),
+  Profile: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...stroke}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c0-3.5 3-6.5 7-6.5s7 3 7 6.5" />
     </svg>
-  )
-}
-
-function IconSignOut() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+  ),
+  Team: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...stroke}>
+      <circle cx="9" cy="8.5" r="3" />
+      <circle cx="16.5" cy="9" r="2.5" />
+      <path d="M3 19c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5" />
+      <path d="M14.5 19c0-2.5 2-4.5 4.5-4.5" />
+    </svg>
+  ),
+  Mail: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" {...stroke}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 8l9 6 9-6" />
+    </svg>
+  ),
+  Logout: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" {...stroke}>
       <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
+      <path d="M16 17l5-5-5-5M21 12H10" />
     </svg>
-  )
+  ),
+  Close: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" {...stroke}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  ),
 }
-
-// ── Nav config ────────────────────────────────────────────────────────────────
 
 const nav = [
-  { href: '/', label: 'Dashboard', Icon: IconDashboard, exact: true },
-  { href: '/leads', label: 'Leads', Icon: IconLeads },
-  { href: '/leads/discover', label: 'Discover', Icon: IconDiscover },
-  { href: '/pipeline', label: 'Pipeline', Icon: IconPipeline },
-  { href: '/analytics', label: 'Analytics', Icon: IconAnalytics },
+  { href: '/', label: 'Home', Icon: I.Home, exact: true },
+  { href: '/leads', label: 'Leads', Icon: I.Leads },
+  { href: '/leads/discover', label: 'Discover', Icon: I.Discover },
+  { href: '/sequences', label: 'Sequences', Icon: I.Sequences },
+  { href: '/pipeline', label: 'Pipeline', Icon: I.Pipeline },
+  { href: '/analytics', label: 'Analytics', Icon: I.Analytics },
 ]
 
 const settingsNav = [
-  { href: '/settings/profile', label: 'Profile', Icon: IconProfile },
-  { href: '/settings/team', label: 'Team', Icon: IconTeam },
+  { href: '/settings/profile', label: 'Profile', Icon: I.Profile },
+  { href: '/settings/email-template', label: 'Email template', Icon: I.Mail },
+  { href: '/settings/team', label: 'Team', Icon: I.Team },
 ]
 
 interface SidebarProps {
@@ -119,92 +115,95 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isActive = (href: string, exact?: boolean) =>
     exact ? path === href : path === href || (href !== '/' && path.startsWith(href))
 
-  const NavLink = ({ href, label, Icon, exact }: { href: string; label: string; Icon: React.FC; exact?: boolean }) => {
+  const NavItem = ({ href, label, Icon, exact }: { href: string; label: string; Icon: () => React.ReactElement; exact?: boolean }) => {
     const active = isActive(href, exact)
     return (
       <Link
         href={href}
         onClick={onClose}
-        className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 group ${
-          active
-            ? 'text-white bg-white/10'
-            : 'text-white/40 hover:text-white/75 hover:bg-white/5'
-        }`}
+        className="relative flex items-center gap-3 px-3 h-9 rounded-lg text-[13px] font-medium group"
       >
         {active && (
-          <motion.div
-            layoutId="sidebar-indicator"
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-indigo-400 rounded-full"
-            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+          <motion.span
+            layoutId="sidebar-active"
+            transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+            className="absolute inset-0 rounded-lg bg-white/[0.07]"
           />
         )}
-        <span className={`transition-colors duration-150 ${active ? 'text-indigo-400' : 'text-white/30 group-hover:text-white/60'}`}>
+        <span className={`relative shrink-0 transition-colors ${active ? 'text-white' : 'text-white/40 group-hover:text-white/70'}`}>
           <Icon />
         </span>
-        {label}
+        <span className={`relative transition-colors ${active ? 'text-white' : 'text-white/55 group-hover:text-white/85'}`}>
+          {label}
+        </span>
       </Link>
     )
   }
 
   const content = (
-    <aside className="flex flex-col w-[220px] min-w-[220px] h-screen bg-[#0a0a0f] border-r border-white/[0.06]">
+    <aside className="flex flex-col w-[232px] min-w-[232px] h-screen bg-[var(--sidebar)]">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-white/[0.06] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-[11px] font-bold shadow-lg shadow-indigo-500/20">
+      <div className="px-5 pt-5 pb-4 flex items-center justify-between">
+        <Link href="/" onClick={onClose} className="flex items-center gap-2.5 group">
+          <div className="relative w-7 h-7 rounded-lg bg-white flex items-center justify-center text-[var(--sidebar)] text-[11px] font-bold tracking-tight transition-transform duration-200 group-hover:scale-105">
             BL
           </div>
-          <div>
-            <div className="text-white text-sm font-semibold leading-none tracking-wide">BLKLIST</div>
-            <div className="text-white/25 text-[10px] mt-0.5 tracking-wider">OUTREACH ENGINE</div>
-          </div>
-        </div>
+          <div className="text-white text-[13px] font-semibold tracking-tight">BLKLIST</div>
+        </Link>
         <button
           onClick={onClose}
-          className="md:hidden text-white/30 hover:text-white/60 transition-colors p-1"
+          className="md:hidden text-white/30 hover:text-white/70 transition-colors p-1"
           aria-label="Close menu"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <I.Close />
         </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {nav.map(({ href, label, Icon, exact }) => (
-          <NavLink key={href} href={href} label={label} Icon={Icon} exact={exact} />
-        ))}
+      <nav className="flex-1 px-3 py-2 overflow-y-auto">
+        <div className="space-y-0.5">
+          {nav.map((item) => <NavItem key={item.href} {...item} />)}
+        </div>
 
-        <div className="pt-5 pb-1">
-          <div className="px-3 text-[9px] font-bold uppercase tracking-[0.12em] text-white/20 mb-1.5">Settings</div>
-          {settingsNav.map(({ href, label, Icon }) => (
-            <NavLink key={href} href={href} label={label} Icon={Icon} />
-          ))}
+        <div className="mt-6 mb-1 px-3">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/25">
+            Settings
+          </div>
+        </div>
+        <div className="space-y-0.5">
+          {settingsNav.map((item) => <NavItem key={item.href} {...item} />)}
         </div>
       </nav>
 
+      {/* Theme toggle */}
+      <div className="px-5 py-2.5 border-t border-[var(--sidebar-line)] flex items-center justify-between">
+        <span className="text-[11.5px] font-medium text-white/45 tracking-tight">Appearance</span>
+        <ThemeToggle />
+      </div>
+
       {/* User */}
-      <div className="px-3 py-3 border-t border-white/[0.06]">
+      <div className="p-3 border-t border-[var(--sidebar-line)]">
         {session?.user ? (
           <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg group">
-            <div className="w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 text-[11px] font-bold shrink-0">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-[11px] font-semibold shrink-0">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white/70 text-xs font-medium truncate leading-none">
+              <div className="text-white/85 text-[12.5px] font-medium truncate leading-tight">
                 {session.user.name || session.user.email}
               </div>
               {session.user.name && (
-                <div className="text-white/25 text-[10px] truncate mt-0.5">{session.user.email}</div>
+                <div className="text-white/35 text-[11px] truncate leading-tight mt-0.5">
+                  {session.user.email}
+                </div>
               )}
             </div>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
               title="Sign out"
-              className="text-white/20 hover:text-white/60 transition-colors shrink-0"
+              className="text-white/30 hover:text-white/80 transition-colors shrink-0 p-1.5 rounded-md hover:bg-white/5"
             >
-              <IconSignOut />
+              <I.Logout />
             </button>
           </div>
         ) : null}
@@ -226,7 +225,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div
         className={`
           fixed md:relative top-0 left-0 z-50 md:z-auto h-full
-          transition-transform duration-200 ease-in-out
+          transition-transform duration-200 ease-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >

@@ -23,10 +23,11 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     if (!lead.contactEmail) return NextResponse.json({ error: 'No contact email on this lead' }, { status: 400 })
 
-    // Load sender identity from user profile
+    // Load sender identity + template from user profile
     let senderName: string | undefined
     let gmailEmail: string | undefined
     let gmailRefreshToken: string | undefined
+    let template: Awaited<ReturnType<typeof db.emailTemplate.findFirst>> = null
 
     if (session?.user?.id) {
       const user = await db.user.findUnique({
@@ -40,6 +41,10 @@ export async function POST(req: NextRequest, { params }: Params) {
           gmailRefreshToken = user.gmailRefreshToken
         }
       }
+
+      template = await db.emailTemplate.findFirst({
+        where: { userId: session.user.id, isDefault: true },
+      })
     }
 
     const email = await db.email.create({
@@ -53,14 +58,24 @@ export async function POST(req: NextRequest, { params }: Params) {
       },
     })
 
+    // Replace common template tokens
+    const firstName = lead.contactName?.split(' ')[0] || ''
+    const replaceTokens = (s: string) => s
+      .replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{lastName\}\}/g, lead.contactName?.split(' ').slice(1).join(' ') || '')
+      .replace(/\{\{contactName\}\}/g, lead.contactName || '')
+      .replace(/\{\{company\}\}/g, lead.company)
+      .replace(/\{\{industry\}\}/g, lead.industry)
+
     await sendEmail({
       to: lead.contactEmail,
-      subject,
-      body: emailBody,
+      subject: replaceTokens(subject),
+      body: replaceTokens(emailBody),
       trackingId: email.trackingId!,
       fromName: senderName,
       gmailEmail,
       gmailRefreshToken,
+      template,
     })
 
     await db.lead.update({

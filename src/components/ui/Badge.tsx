@@ -1,13 +1,13 @@
-const STATUS_STYLES: Record<string, string> = {
-  DISCOVERED: 'bg-gray-100 text-gray-600',
-  CONTACTED:  'bg-blue-50 text-blue-600',
-  OPENED:     'bg-amber-50 text-amber-600',
-  REPLIED:    'bg-violet-50 text-violet-600',
-  MEETING:    'bg-green-50 text-green-700',
-  CLOSED:     'bg-emerald-50 text-emerald-700',
-  DISQUALIFIED: 'bg-red-50 text-red-500',
-  DRAFT:      'bg-gray-100 text-gray-500',
-  SENT:       'bg-blue-50 text-blue-600',
+const STATUS_STYLES: Record<string, { dot: string; bg: string; text: string }> = {
+  DISCOVERED:   { dot: 'bg-zinc-400',     bg: 'bg-zinc-100',    text: 'text-zinc-600' },
+  CONTACTED:    { dot: 'bg-sky-500',      bg: 'bg-sky-50',      text: 'text-sky-700' },
+  OPENED:       { dot: 'bg-amber-500',    bg: 'bg-amber-50',    text: 'text-amber-700' },
+  REPLIED:      { dot: 'bg-violet-500',   bg: 'bg-violet-50',   text: 'text-violet-700' },
+  MEETING:      { dot: 'bg-emerald-500',  bg: 'bg-emerald-50',  text: 'text-emerald-700' },
+  CLOSED:       { dot: 'bg-emerald-600',  bg: 'bg-emerald-50',  text: 'text-emerald-700' },
+  DISQUALIFIED: { dot: 'bg-red-400',      bg: 'bg-red-50',      text: 'text-red-600' },
+  DRAFT:        { dot: 'bg-zinc-400',     bg: 'bg-zinc-100',    text: 'text-zinc-600' },
+  SENT:         { dot: 'bg-sky-500',      bg: 'bg-sky-50',      text: 'text-sky-700' },
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -23,8 +23,10 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 export function Badge({ status }: { status: string }) {
+  const s = STATUS_STYLES[status] ?? { dot: 'bg-zinc-400', bg: 'bg-zinc-100', text: 'text-zinc-600' }
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-600'}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 h-[22px] rounded-md text-[11px] font-medium ${s.bg} ${s.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
       {STATUS_LABELS[status] ?? status}
     </span>
   )

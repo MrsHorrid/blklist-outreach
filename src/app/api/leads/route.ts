@@ -66,10 +66,21 @@ export async function GET(req: NextRequest) {
       db.lead.count({ where }),
     ])
 
+    // Fetch active enrollments for these leads
+    const leadIds = leads.map(l => l.id)
+    const enrollments = leadIds.length > 0
+      ? await (db as any).sequenceEnrollment.findMany({
+          where: { leadId: { in: leadIds }, status: { in: ['ACTIVE', 'PAUSED'] } },
+          select: { leadId: true, id: true, status: true, currentStep: true, sequence: { select: { id: true, name: true } } },
+        })
+      : []
+    const enrollmentMap = new Map(enrollments.map((e: any) => [e.leadId, e]))
+
     // Flatten tags for easier client consumption
     const leadsWithTags = leads.map(l => ({
       ...l,
       tags: l.tags.map(lt => lt.tag),
+      activeEnrollment: enrollmentMap.get(l.id) ?? null,
     }))
 
     return NextResponse.json({ leads: leadsWithTags, total })
